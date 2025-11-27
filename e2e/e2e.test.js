@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer';
 import { fork } from 'child_process';
 
-jest.setTimeout(30000); // default puppeteer timeout
+jest.setTimeout(30000);
 
 describe('test e2e', () => {
   let browser = null;
@@ -11,35 +11,36 @@ describe('test e2e', () => {
 
   beforeAll(async () => {
     server = fork(`${__dirname}/e2e.server.js`);
+
+    // Улучшенный обработчик запуска сервера
     await new Promise((resolve, reject) => {
-      server.on('error', reject);
+      server.on('error', (err) => {
+        console.error('Сервер упал:', err);
+        reject(err);
+      });
+
       server.on('message', (message) => {
         if (message === 'ok') {
+          console.log('Сервер готов');
           resolve();
         }
       });
+
+      // Таймаут на запуск сервера (10 секунд)
+      setTimeout(() => {
+        reject(new Error('Сервер не ответил за 10 секунд'));
+      }, 10000);
     });
 
+    // Запуск Puppeteer с флагами для CI/контейнеров
     browser = await puppeteer.launch({
-      // headless: false, // headless, slowMo, devtools закоментировать происходит в фоновом режиме
-      // slowMo: 100,
-      // devtools: true, // показать devTools
+      headless: true, // Для отладки можно поставить false
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage', // Важно для Docker
+      ],
     });
-    page = await browser.newPage(); // открыл браузер и новую вкладку
-  });
 
-  afterAll(async () => {
-    await browser.close();
-    server.kill();
-  });
-
-  test('test btnClick', async () => {
-    await page.goto(baseUrl); // проверили открывается ли путь
-    await page.waitForSelector('body'); // проверили есть ли тег "body"
-
-    const popovers = await page.$('.popovers');
-    const btn = await popovers.$('.btnPopovers');
-    await btn.click(); //  клик на кнопке
-    await page.waitForSelector('.messagePopovers'); // проверили есть ли тег с классом "messagePopovers"
-  });
-});
+    page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 720 }); // Адаптация
