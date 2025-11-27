@@ -20,7 +20,7 @@ describe('test e2e', () => {
       });
     });
 
-    browser = await puppetteer.launch({
+    browser = await puppeteer.launch({
       // headless: false, // headless, slowMo, devtools закоментировать происходит в фоновом режиме
       // slowMo: 100,
       // devtools: true, // показать devTools
