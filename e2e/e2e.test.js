@@ -43,4 +43,43 @@ describe('test e2e', () => {
     });
 
     page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 720 }); // Адаптация
+    await page.setViewport({ width: 1280, height: 720 }); // Адаптация под экран
+  });
+
+  afterAll(async () => {
+    if (browser) {
+      await browser.close();
+      console.log('Браузер закрыт');
+    }
+    if (server) {
+      server.kill();
+      console.log('Сервер остановлен');
+    }
+  });
+
+  test('test btnClick', async () => {
+    // Переход на страницу с явным таймаутом
+    await page.goto(baseUrl, {
+      waitUntil: 'networkidle0', // Ждём полной загрузки
+      timeout: 10000,
+    });
+
+    // Проверка наличия body
+    await page.waitForSelector('body', { timeout: 5000 });
+
+    // Поиск элементов с проверкой
+    const popovers = await page.$('.popovers');
+    if (!popovers) {
+      throw new Error('Элемент .popovers не найден');
+    }
+
+    const btn = await popovers.$('.btnPopovers');
+    if (!btn) {
+      throw new Error('Кнопка .btnPopovers не найдена');
+    }
+
+    // Клик и ожидание результата
+    await btn.click();
+    await page.waitForSelector('.messagePopovers', { timeout: 5000 });
+  });
+});
