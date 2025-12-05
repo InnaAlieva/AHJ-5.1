@@ -1,12 +1,38 @@
+* {
+	margin: 0 auto;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	display: flex;
+	flex-wrap: wrap;
+	background: #d1c8ff;
+	font-family: sans-serif;
+}
+
+
+
+.container {
+	
+	display: flex;
+	flex-direction: column;
+}
+
+
 .popovers {
     position: relative;
-    background-color: #def7d6;
+    display: inline-block;
+    background-color:  #cc0033;
     margin-bottom: 5px;
     border: 1px dashed black;
-    border-radius: .5rem;
+    border-radius: .4rem;
     width: 500px;
     height: 200px;
     text-align: center;
+    color: white;
+	  padding: 6px 12px;
+	  cursor: pointer;
 }
 
 .btnPopovers {
