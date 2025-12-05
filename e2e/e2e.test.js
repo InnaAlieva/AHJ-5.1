@@ -1,85 +1,64 @@
-import puppeteer from 'puppeteer';
+import { test, describe, expect, beforeAll, afterAll } from '@jest/globals';
+import puppetteer from 'puppeteer';
 import { fork } from 'child_process';
 
 jest.setTimeout(30000);
 
-describe('test e2e', () => {
+describe('Testing the popover', () => {
+  const baseUrl = 'http://localhost:8087';
   let browser = null;
   let page = null;
   let server = null;
-  const baseUrl = 'http://localhost:9000';
 
   beforeAll(async () => {
     server = fork(`${__dirname}/e2e.server.js`);
-
-    // Улучшенный обработчик запуска сервера
     await new Promise((resolve, reject) => {
-      server.on('error', (err) => {
-        console.error('Сервер упал:', err);
-        reject(err);
-      });
-
-      server.on('message', (message) => {
-        if (message === 'ok') {
-          console.log('Сервер готов');
-          resolve();
-        }
-      });
-
-      // Таймаут на запуск сервера (10 секунд)
-      setTimeout(() => {
-        reject(new Error('Сервер не ответил за 10 секунд'));
-      }, 10000);
+      if (server.connected) {
+        process.send('ok');
+        resolve();
+      } else {
+        reject();
+      }
     });
 
-    // Запуск Puppeteer с флагами для CI/контейнеров
-    browser = await puppeteer.launch({
-      headless: true, // Для отладки можно поставить false
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage', // Важно для Docker
-      ],
-    });
+    browser = await puppetteer.launch(
+      // {
+      //   headless: false,
+      //   slowMo: 100,
+      //   devtools: true,
+      //   defaultViewport: { width: 1000, height: 1000 },
+      // }
+    );
 
     page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 720 }); // Адаптация под экран
   });
 
   afterAll(async () => {
-    if (browser) {
-      await browser.close();
-      console.log('Браузер закрыт');
-    }
-    if (server) {
-      server.kill();
-      console.log('Сервер остановлен');
-    }
+    await browser.close();
+    server.kill();
   });
 
-  test('test btnClick', async () => {
-    // Переход на страницу с явным таймаутом
-    await page.goto(baseUrl, {
-      waitUntil: 'networkidle0', // Ждём полной загрузки
-      timeout: 10000,
+  test('The appearance and disappearance of the popover', async () => {
+    await page.goto(baseUrl);
+    const popoverToggle = await page.$('.popover-toggle');
+
+    const datasetOfPopoverToggle = await page.evaluate(() => {
+      const dataset = document.querySelector('.popover-toggle').dataset;
+      return Object.fromEntries(Object.entries(dataset));
     });
+    expect(datasetOfPopoverToggle.title).toBeTruthy();
+    expect(datasetOfPopoverToggle.info).toBeTruthy();
 
-    // Проверка наличия body
-    await page.waitForSelector('body', { timeout: 5000 });
+    await popoverToggle.click();
+    expect(await page.$('.popover')).toBeTruthy();
 
-    // Поиск элементов с проверкой
-    const popovers = await page.$('.popovers');
-    if (!popovers) {
-      throw new Error('Элемент .popovers не найден');
-    }
+    const datasetOfPopover = await page.evaluate(() => {
+      const dataset = document.querySelector('.popover').dataset;
+      return Object.fromEntries(Object.entries(dataset));
+    });
+    expect(datasetOfPopover.id).toBeTruthy();
 
-    const btn = await popovers.$('.btnPopovers');
-    if (!btn) {
-      throw new Error('Кнопка .btnPopovers не найдена');
-    }
-
-    // Клик и ожидание результата
-    await btn.click();
-    await page.waitForSelector('.messagePopovers', { timeout: 5000 });
+    await popoverToggle.click();
+    expect(await page.$('.popover')).toBeNull();
   });
 });
